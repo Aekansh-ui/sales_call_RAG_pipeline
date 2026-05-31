@@ -610,7 +610,101 @@ resolves `postgres` → the IP address of the Postgres container automatically.
 
 ## 3. Building the app container
 
-*(Commands added when T-01.3 is complete)*
+### 3.1 Build the image
+
+```bash
+docker build -t sales-rag-app .
+```
+
+**What it does:**
+`docker build` reads the `Dockerfile` in the current directory and produces an image.
+
+- `-t sales-rag-app` — tag (name) the resulting image `sales-rag-app`.
+  Without `-t` Docker assigns a random hex ID — hard to reference later.
+- `.` — the **build context**: the directory Docker sends to the Docker daemon.
+  Every `COPY` instruction in the Dockerfile copies from this context, not from
+  your filesystem directly. Keeping the context small (via `.dockerignore`) speeds
+  up builds because Docker has to transfer the context over a socket.
+
+**Why we run it here:**
+To verify the Dockerfile is syntactically correct and all packages install successfully
+before writing docker-compose.yml.
+
+**Expected output (first build, no cache):**
+```
+[1/5] FROM docker.io/library/python:3.11-slim
+[2/5] RUN apt-get update && apt-get install -y ...
+[3/5] COPY requirements.txt .
+[4/5] RUN pip install --no-cache-dir -r requirements.txt
+[5/5] COPY . .
+Successfully built <image-id>
+Successfully tagged sales-rag-app:latest
+```
+Takes ~2-4 minutes on first build (downloading base image + pip installs).
+Subsequent builds with only code changes take ~5 seconds (layers 1-4 are cached).
+
+**If it fails with "package not found":**
+A package name in requirements.txt is wrong. `pip` error messages name the bad package.
+
+**If it fails with "apt-get: command not found":**
+The base image changed. Check `FROM python:3.11-slim` is typed exactly.
+
+---
+
+### 3.2 Verify the image was built
+
+```bash
+docker images sales-rag-app
+```
+
+**Expected output:**
+```
+REPOSITORY      TAG       IMAGE ID       CREATED         SIZE
+sales-rag-app   latest    abc123def456   2 minutes ago   ~600MB
+```
+
+---
+
+### 3.3 Test that imports work inside the container
+
+```bash
+docker run --rm sales-rag-app python -c "
+import langchain; print('langchain OK')
+import fastapi; print('fastapi OK')
+import streamlit; print('streamlit OK')
+import psycopg2; print('psycopg2 OK')
+import pgvector; print('pgvector OK')
+import vaderSentiment; print('vaderSentiment OK')
+"
+```
+
+**What it does:**
+- `docker run --rm` — start a container and delete it immediately when it exits.
+  `--rm` keeps your system clean; without it the stopped container stays in
+  `docker ps -a` until you manually remove it.
+- `sales-rag-app` — the image to run (built in 3.1).
+- `python -c "..."` — runs a Python one-liner instead of the default CMD.
+
+**Why we run it here:**
+Verifies that `pip install` inside the container installed every package correctly
+and that Python can import them. A successful import means no missing C dependencies,
+no version conflicts, and no typos in package names.
+
+**Expected output:**
+```
+langchain OK
+fastapi OK
+streamlit OK
+psycopg2 OK
+pgvector OK
+vaderSentiment OK
+```
+
+**If an import fails:**
+```
+ModuleNotFoundError: No module named 'langchain'
+```
+The package didn't install. Check the package name in `requirements.txt` and rebuild.
 
 ---
 
@@ -638,7 +732,7 @@ resolves `postgres` → the IP address of the Postgres container automatically.
 |---|---|---|
 | T-01.1 | Directory skeleton created | ✅ |
 | T-01.2 | `.env` + `.env.example` | ✅ |
-| T-01.3 | Dockerfile + requirements.txt | ⬜ |
+| T-01.3 | Dockerfile + requirements.txt | ✅ |
 | T-01.4 | docker-compose.yml (3 services) | ⬜ |
 | T-01.5 | Postgres pgvector init script | ⬜ |
 | T-01.6 | Ollama model pull | ⬜ |

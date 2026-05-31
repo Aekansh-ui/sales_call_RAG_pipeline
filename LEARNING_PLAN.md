@@ -14,11 +14,11 @@
 | Field | Value |
 |---|---|
 | **Current task** | T-01 — Project Scaffold & Docker |
-| **Current sub-step** | T-01.3 — Dockerfile + requirements.txt (not started) |
-| **Status** | 🟡 In progress — 2 of 7 sub-steps done |
-| **Last session** | 2026-05-31 — T-01.1 (directory skeleton) and T-01.2 (.env + .env.example + .gitignore) completed. |
-| **Next action** | Begin T-01.3: write requirements.txt and Dockerfile, explain image layers and layer caching. |
-| **Blockers / open questions** | Docker daemon may still need starting — run `sudo systemctl start docker` before T-01.3 verification. |
+| **Current sub-step** | T-01.4 — docker-compose.yml (not started) |
+| **Status** | 🟡 In progress — 3 of 7 sub-steps done |
+| **Last session** | 2026-05-31 — T-01.3 completed: requirements.txt and Dockerfile written, image built successfully, pip installs verified. |
+| **Next action** | Begin T-01.4: write docker-compose.yml with 3 services (postgres+pgvector, ollama, app). Teach service graph, depends_on, named volumes, internal DNS. |
+| **Blockers / open questions** | None. Docker is running. |
 
 **Overall progress:** 🟢🟡⬜⬜⬜⬜⬜⬜⬜ T-00 done · T-01 in progress (2/7) · T-02 through T-08 not started
 
@@ -163,7 +163,7 @@ task runner.
 **Sub-steps:**
 - [x] T-01.1 — Directory structure: `/app`, `/ingestion`, `/rag`, `/ui`, `/sql`, `/docker`.
 - [x] T-01.2 — `.env` for all config (DB URL, model names, ports, secrets).
-- [ ] T-01.3 — Python 3.11 app container + `requirements.txt` (langchain, psycopg2, fastapi, streamlit, …).
+- [x] T-01.3 — Python 3.11 app container + `requirements.txt` (langchain, psycopg2, fastapi, streamlit, …).
 - [ ] T-01.4 — `docker-compose.yml`: 3 services — postgres (+pgvector), ollama, app; `restart: unless-stopped`.
 - [ ] T-01.5 — Postgres init script enables pgvector on first boot.
 - [ ] T-01.6 — Ollama with `llama3.2:3b` + `nomic-embed-text` pre-pulled.
