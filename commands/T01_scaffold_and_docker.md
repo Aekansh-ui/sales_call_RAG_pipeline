@@ -710,7 +710,193 @@ The package didn't install. Check the package name in `requirements.txt` and reb
 
 ## 4. Docker Compose — bring services up and down
 
-*(Commands added when T-01.4 is complete)*
+### 4.1 Validate the docker-compose.yml file
+
+```bash
+docker compose config --quiet && echo "VALID"
+```
+
+**What it does:**
+`docker compose config` parses and validates the `docker-compose.yml` file.
+
+- `config` — merges all compose files, resolves `${VARIABLE}` references from `.env`,
+  and outputs the fully-resolved configuration. If there are YAML syntax errors or
+  unknown keys, it prints an error and exits non-zero.
+- `--quiet` — suppresses the resolved config output so you only see errors (or the
+  `VALID` echo if everything parsed correctly).
+- `&& echo "VALID"` — the `&&` runs `echo "VALID"` only if the previous command
+  succeeded (exit code 0). A clean way to confirm success in a script.
+
+**Why we run it here:**
+Before ever running `docker compose up`, we validate the file so typos or bad indentation
+fail fast with a clear error message, not a cryptic runtime failure.
+
+**Expected output:**
+```
+VALID
+```
+
+**If it fails:**
+```
+yaml: line 14: mapping values are not allowed in this context
+```
+A YAML indentation or syntax error. The line number is usually correct. In YAML,
+indentation must use spaces (never tabs), and list items start with `- `.
+
+---
+
+### 4.2 Start all services
+
+```bash
+docker compose up -d
+```
+
+**What it does:**
+Starts all services defined in `docker-compose.yml`.
+
+- `up` — pulls any missing images, builds images with `build:` directives, creates
+  containers, attaches networks and volumes, and starts all services.
+- `-d` — detached mode: runs in the background and returns your terminal prompt.
+  Without `-d`, Compose streams all container logs to your terminal and blocks until
+  you Ctrl+C.
+
+**Start order** (determined by `depends_on` graph, not file order):
+1. `postgres` and `ollama` start in parallel (no dependencies between them)
+2. `app` starts only after both postgres and ollama pass their healthchecks
+
+**Expected output:**
+```
+[+] Running 3/3
+ ✔ Container sales_call_rag-postgres-1  Healthy
+ ✔ Container sales_call_rag-ollama-1    Healthy
+ ✔ Container sales_call_rag-app-1       Started
+```
+
+**If it fails with "port already in use":**
+```
+Error: bind: address already in use
+```
+Another process is using port 5432, 11434, 8000, or 8501. Find it:
+```bash
+sudo lsof -i :5432    # see what's using port 5432
+```
+Either stop that process or change the host port in your `.env` file.
+
+---
+
+### 4.3 Check running containers
+
+```bash
+docker compose ps
+```
+
+**What it does:**
+Lists all containers for this Compose project with their status, ports, and health.
+
+**Expected output:**
+```
+NAME                          IMAGE                    STATUS                   PORTS
+sales_call_rag-app-1          sales_call_rag-app       Up About a minute        0.0.0.0:8000->8000/tcp, 0.0.0.0:8501->8501/tcp
+sales_call_rag-ollama-1       ollama/ollama:latest     Up About a minute (healthy)   0.0.0.0:11434->11434/tcp
+sales_call_rag-postgres-1     pgvector/pgvector:pg16   Up About a minute (healthy)   0.0.0.0:5432->5432/tcp
+```
+
+The `(healthy)` tag confirms the healthchecks are passing.
+
+---
+
+### 4.4 Follow logs from all services
+
+```bash
+docker compose logs -f
+```
+
+**What it does:**
+- `logs` — prints all stdout/stderr output from every container in the project.
+- `-f` — follow: stream new log lines as they appear (like `tail -f`). Ctrl+C stops
+  streaming but doesn't stop the containers.
+
+**Useful variants:**
+```bash
+docker compose logs -f postgres     # only postgres logs
+docker compose logs -f app          # only app logs
+docker compose logs --tail=50 app   # last 50 lines from app
+```
+
+---
+
+### 4.5 Execute a command inside a running container
+
+```bash
+docker compose exec app bash
+```
+
+**What it does:**
+Opens an interactive bash shell inside the already-running `app` container.
+
+- `exec` — run a command in a running container (different from `docker run`, which
+  starts a new container)
+- `app` — the service name (from docker-compose.yml)
+- `bash` — the command to run inside
+
+**Why this is useful:**
+You can inspect the filesystem, run Python, check environment variables, or debug
+import errors — all inside the exact same environment the app runs in:
+```bash
+python -c "import langchain; print(langchain.__version__)"
+env | grep DATABASE_URL
+```
+
+Exit with `exit` or Ctrl+D.
+
+---
+
+### 4.6 Stop all services (keep data)
+
+```bash
+docker compose down
+```
+
+**What it does:**
+Stops and removes all containers and the Docker network. Named volumes (`postgres_data`,
+`ollama_data`) are **preserved** — your database and downloaded models survive.
+
+**When to use:**
+Normal stop. Come back later with `docker compose up -d` and everything is as you left it.
+
+---
+
+### 4.7 Stop all services AND delete all data
+
+```bash
+docker compose down -v
+```
+
+**What it does:**
+Same as `down`, but the `-v` flag also deletes all named volumes.
+
+**Effect:**
+- `postgres_data` deleted → database is wiped; init scripts run again on next `up`
+- `ollama_data` deleted → all downloaded models deleted; must re-pull (takes 5–10 min)
+
+**When to use:**
+- `make reset-db` in T-01.7 (reset the database to a clean state for testing)
+- When a volume is corrupt or you want a completely fresh start
+- **Not** for routine stops — you'd have to re-download models every time
+
+---
+
+### 4.8 Rebuild the app image after code changes
+
+```bash
+docker compose up -d --build
+```
+
+**What it does:**
+Re-builds the `app` image from the Dockerfile before starting. Use this when you change
+`requirements.txt` or the `Dockerfile` itself. For code-only changes, you don't need
+`--build` because the bind mount (`./:/app`) makes host changes immediately visible inside
+the container.
 
 ---
 
@@ -733,7 +919,7 @@ The package didn't install. Check the package name in `requirements.txt` and reb
 | T-01.1 | Directory skeleton created | ✅ |
 | T-01.2 | `.env` + `.env.example` | ✅ |
 | T-01.3 | Dockerfile + requirements.txt | ✅ |
-| T-01.4 | docker-compose.yml (3 services) | ⬜ |
-| T-01.5 | Postgres pgvector init script | ⬜ |
+| T-01.4 | docker-compose.yml (3 services) | ✅ |
+| T-01.5 | Postgres pgvector init script | ✅ |
 | T-01.6 | Ollama model pull | ⬜ |
 | T-01.7 | Makefile targets | ⬜ |

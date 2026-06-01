@@ -14,13 +14,13 @@
 | Field | Value |
 |---|---|
 | **Current task** | T-01 — Project Scaffold & Docker |
-| **Current sub-step** | T-01.4 — docker-compose.yml (not started) |
-| **Status** | 🟡 In progress — 3 of 7 sub-steps done |
-| **Last session** | 2026-05-31 — T-01.3 completed: requirements.txt and Dockerfile written, image built successfully, pip installs verified. |
-| **Next action** | Begin T-01.4: write docker-compose.yml with 3 services (postgres+pgvector, ollama, app). Teach service graph, depends_on, named volumes, internal DNS. |
-| **Blockers / open questions** | None. Docker is running. |
+| **Current sub-step** | T-01.6 — Ollama model pull (not started) |
+| **Status** | 🟡 In progress — 5 of 7 sub-steps done |
+| **Last session** | 2026-06-02 — T-01.4 completed: docker-compose.yml written with postgres+pgvector, ollama, app services (depends_on with healthchecks, named volumes, internal DNS). T-01.5 completed: docker/init-pgvector.sql created and mounted into postgres container. |
+| **Next action** | Begin T-01.6: wire Ollama model pull into Makefile (`make pull-models`). Teach `docker compose exec`, `ollama pull`, and why models live in a named volume. |
+| **Blockers / open questions** | None. |
 
-**Overall progress:** 🟢🟡⬜⬜⬜⬜⬜⬜⬜ T-00 done · T-01 in progress (2/7) · T-02 through T-08 not started
+**Overall progress:** 🟢🟡⬜⬜⬜⬜⬜⬜⬜ T-00 done · T-01 in progress (5/7) · T-02 through T-08 not started
 
 ---
 
