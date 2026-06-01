@@ -14,11 +14,11 @@
 | Field | Value |
 |---|---|
 | **Current task** | T-01 — Project Scaffold & Docker |
-| **Current sub-step** | T-01.6 — Ollama model pull (not started) |
-| **Status** | 🟡 In progress — 5 of 7 sub-steps done |
-| **Last session** | 2026-06-02 — T-01.4 completed: docker-compose.yml written with postgres+pgvector, ollama, app services (depends_on with healthchecks, named volumes, internal DNS). T-01.5 completed: docker/init-pgvector.sql created and mounted into postgres container. |
-| **Next action** | Begin T-01.6: wire Ollama model pull into Makefile (`make pull-models`). Teach `docker compose exec`, `ollama pull`, and why models live in a named volume. |
-| **Blockers / open questions** | None. |
+| **Current sub-step** | T-01.6 — Ollama model pull (Makefile written, models not yet pulled) |
+| **Status** | 🟡 In progress — 6 of 7 sub-steps done (T-01.7 Makefile written; T-01.6 verify pending) |
+| **Last session** | 2026-06-02 — T-01.7 Makefile written (up/down/logs/shell/pull-models/migrate/reset-db). `make help` verified. Services not yet started. |
+| **Next action** | Run `make up` (first boot — pulls postgres+pgvector and ollama images, builds app image). Then `make pull-models` to download llama3.2:3b (~2 GB) and nomic-embed-text (~270 MB) into the ollama_data volume. Verify with `ollama list`. |
+| **Blockers / open questions** | None. First `make up` will take a few minutes (image pulls + pip cache). |
 
 **Overall progress:** 🟢🟡⬜⬜⬜⬜⬜⬜⬜ T-00 done · T-01 in progress (5/7) · T-02 through T-08 not started
 
