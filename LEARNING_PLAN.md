@@ -13,14 +13,14 @@
 
 | Field | Value |
 |---|---|
-| **Current task** | T-01 — Project Scaffold & Docker |
-| **Current sub-step** | T-01.6 — Ollama model pull (Makefile written, models not yet pulled) |
-| **Status** | 🟡 In progress — 6 of 7 sub-steps done (T-01.7 Makefile written; T-01.6 verify pending) |
-| **Last session** | 2026-06-02 — T-01.7 Makefile written (up/down/logs/shell/pull-models/migrate/reset-db). `make help` verified. Services not yet started. |
-| **Next action** | Run `make up` (first boot — pulls postgres+pgvector and ollama images, builds app image). Then `make pull-models` to download llama3.2:3b (~2 GB) and nomic-embed-text (~270 MB) into the ollama_data volume. Verify with `ollama list`. |
-| **Blockers / open questions** | None. First `make up` will take a few minutes (image pulls + pip cache). |
+| **Current task** | T-03 — Audio Transcription Pipeline |
+| **Current sub-step** | T-03.1 — faster-whisper in app container |
+| **Status** | 🟡 T-02 complete · T-03 not started |
+| **Last session** | 2026-06-13 — T-02 fully complete. All 5 tables created via 001_init.sql + 002_pgvector.sql. IVFFlat index on chunk_embeddings.embedding (lists=50, cosine). db.py with connection pool, run_migrations(), health_check(). All "done when" criteria verified. |
+| **Next action** | Start T-03: add faster-whisper to requirements.txt + Dockerfile, write transcription module, test on a short audio file. |
+| **Blockers / open questions** | HuggingFace account needed before T-03.2 (pyannote diarization). Create one and accept pyannote model terms before that sub-step. |
 
-**Overall progress:** 🟢🟡⬜⬜⬜⬜⬜⬜⬜ T-00 done · T-01 in progress (5/7) · T-02 through T-08 not started
+**Overall progress:** 🟢🟢🟢🟡⬜⬜⬜⬜⬜ T-00 done · T-01 done · T-02 done · T-03 in progress · T-04 through T-08 not started
 
 ---
 
@@ -184,13 +184,13 @@ ANN vs exact search; IVFFlat (lists/probes, recall vs speed); migrations as vers
 for the DB; connection pooling.
 
 **Sub-steps:**
-- [ ] T-02.1 — `calls` table (id UUID PK, file_name, call_date, salesperson, customer, duration_sec, raw_transcript, created_at).
-- [ ] T-02.2 — `chunks` table (id, call_id FK, chunk_index, speaker_role, text, start_sec, end_sec, sentiment).
-- [ ] T-02.3 — `chunk_embeddings` table (chunk_id FK, embedding vector(768)).
-- [ ] T-02.4 — `call_topics` (id, call_id FK, topic, confidence) + `call_sentiment` (call_id FK, overall, score).
-- [ ] T-02.5 — Migration files `/sql/migrations/001_init.sql`, `002_pgvector.sql`.
-- [ ] T-02.6 — `db.py`: connection pool, `run_migration()`, `health_check()`.
-- [ ] T-02.7 — IVFFlat index on `chunk_embeddings.embedding`.
+- [x] T-02.1 — `calls` table (id UUID PK, file_name, call_date, salesperson, customer, duration_sec, raw_transcript, created_at).
+- [x] T-02.2 — `chunks` table (id, call_id FK, chunk_index, speaker_role, text, start_sec, end_sec, sentiment).
+- [x] T-02.3 — `chunk_embeddings` table (chunk_id FK, embedding vector(768)).
+- [x] T-02.4 — `call_topics` (id, call_id FK, topic, confidence) + `call_sentiment` (call_id FK, overall, score).
+- [x] T-02.5 — Migration files `/sql/migrations/001_init.sql`, `002_pgvector.sql`.
+- [x] T-02.6 — `db.py`: connection pool, `run_migration()`, `health_check()`.
+- [x] T-02.7 — IVFFlat index on `chunk_embeddings.embedding`.
 
 **Done when:** `\dt` shows all 5 tables · `\d chunk_embeddings` shows `vector(768)` ·
 INSERT+SELECT works on each table · `EXPLAIN` on a vector query shows IVFFlat index scan.
