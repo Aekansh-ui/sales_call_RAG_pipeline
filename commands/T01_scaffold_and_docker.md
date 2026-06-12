@@ -902,13 +902,107 @@ the container.
 
 ## 5. Verification commands
 
-*(Commands added when T-01 verification is complete)*
+### 5.1 Check all containers are healthy
+
+```bash
+docker compose ps
+```
+
+**Expected output:**
+```
+NAME                        IMAGE                    STATUS                    PORTS
+sales_call_rag-app-1        sales_call_rag-app       Up                        0.0.0.0:8000->8000, 0.0.0.0:8501->8501
+sales_call_rag-ollama-1     ollama/ollama:latest     Up (healthy)              0.0.0.0:11434->11434
+sales_call_rag-postgres-1   pgvector/pgvector:pg16   Up (healthy)              0.0.0.0:5432->5432
+```
+
+---
+
+### 5.2 Verify Ollama models are pulled
+
+```bash
+docker compose exec ollama ollama list
+```
+
+**Expected output:**
+```
+NAME                       ID              SIZE      MODIFIED
+nomic-embed-text:latest    0a109f422b47    274 MB    ...
+llama3.2:3b                a80c4f17acd5    2.0 GB    ...
+```
+
+**Why `ollama list` and not `curl`:**
+The official Ollama Docker image ships without `curl` or `wget`. The health check
+and this verification both use the `ollama` CLI directly, which talks to the server
+via its built-in gRPC interface — no HTTP client needed.
+
+---
+
+### 5.3 Verify pgvector extension is enabled
+
+```bash
+docker compose exec postgres psql -U raguser -d sales_rag -c "\dx"
+```
+
+**What it does:**
+`\dx` is a psql meta-command that lists all installed extensions.
+Look for `vector` in the output.
 
 ---
 
 ## 6. Makefile targets
 
-*(Commands added when T-01.7 is complete)*
+### 6.1 List all targets
+
+```bash
+make help
+```
+
+**Expected output:**
+```
+Sales Call RAG Pipeline — available targets:
+
+  make up           Build images and start all services (detached)
+  make down         Stop and remove containers (data preserved)
+  make reset-db     Stop containers AND delete all volumes (full wipe)
+  make logs         Follow logs from all services
+  make shell        Open a bash shell inside the app container
+  make pull-models  Pull LLM and embedding models into Ollama
+  make migrate      Run SQL migration files against the database
+  make help         Show this message
+```
+
+---
+
+### 6.2 Reference — all Makefile targets
+
+| Target | Command it runs | When to use |
+|---|---|---|
+| `make up` | `docker compose up -d --build` | Start everything (first boot or after code changes) |
+| `make down` | `docker compose down` | Stop containers, keep DB data and models |
+| `make reset-db` | `docker compose down -v` | Full wipe — deletes DB and models volumes |
+| `make logs` | `docker compose logs -f` | Stream all container logs |
+| `make shell` | `docker compose exec app bash` | Interactive shell inside app container |
+| `make pull-models` | `ollama pull llama3.2:3b` + `nomic-embed-text` | Download models into Ollama (once) |
+| `make migrate` | `python -m app.db migrate` | Run SQL migration files |
+
+**Important — Ollama health check fix (discovered in T-01):**
+The Ollama image has no `curl` or `wget`. The original health check used `curl` and
+always failed, preventing the `app` container from starting. Fixed by changing:
+```yaml
+# Before (broken):
+test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
+
+# After (working):
+test: ["CMD", "ollama", "list"]
+```
+
+**Important — `docker compose restart` does NOT re-read env files:**
+`restart` only restarts the container process. Environment variables from `env_file`
+are baked in at container *creation* time. To pick up new env vars, you must run:
+```bash
+docker compose up -d   # recreates containers with updated env
+```
 
 ---
 
@@ -921,5 +1015,5 @@ the container.
 | T-01.3 | Dockerfile + requirements.txt | ✅ |
 | T-01.4 | docker-compose.yml (3 services) | ✅ |
 | T-01.5 | Postgres pgvector init script | ✅ |
-| T-01.6 | Ollama model pull | ⬜ |
-| T-01.7 | Makefile targets | ⬜ |
+| T-01.6 | Ollama models pulled (llama3.2:3b + nomic-embed-text) | ✅ |
+| T-01.7 | Makefile targets (up/down/logs/shell/pull-models/migrate/reset-db) | ✅ |
