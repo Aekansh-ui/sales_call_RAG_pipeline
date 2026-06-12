@@ -1,0 +1,21 @@
+# Secrets — never commit
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Audio files (too large for git)
+*.mp3
+*.wav
+*.m4a
+
+# Pytest
+.pytest_cache/
+.coverage
+
+# OS
+.DS_Store

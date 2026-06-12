@@ -1,0 +1,79 @@
+services:
+
+  # ---------------------------------------------------------------------------
+  # postgres + pgvector
+  # Image: pgvector/pgvector:pg16
+  #   Official Postgres 16 with the pgvector extension pre-compiled.
+  #   Using this instead of plain postgres:16 saves us having to compile
+  #   pgvector from source on first boot.
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-pgvector.sql:/docker-entrypoint-initdb.d/init-pgvector.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # app — our Python application (FastAPI + Streamlit + ingestion pipeline)
+  # build: . means Docker builds from the Dockerfile in the repo root.
+  # No pre-built image — we own this code and rebuild it on every change.
+  # ---------------------------------------------------------------------------
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./:/app
+    ports:
+      - "${FASTAPI_PORT:-8000}:8000"
+      - "${STREAMLIT_PORT:-8501}:8501"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    command: >
+      sh -c "echo 'Services ready. Container is up.' && tail -f /dev/null"
+
+  # ---------------------------------------------------------------------------
+  # ollama — local LLM + embedding server
+  # Image: ollama/ollama:latest
+  #   Runs llama3.2:3b (generation) and nomic-embed-text (embeddings).
+  #   Models are stored in a named volume so they survive restarts.
+  #   Pulling a model takes 1-5 min and several GB of download — we do it
+  #   once with `make pull-models`, then it's cached in the volume forever.
+  # ---------------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+# ---------------------------------------------------------------------------
+# Named volumes — Docker manages these under /var/lib/docker/volumes/
+# Data persists across `docker compose down` and container restarts.
+# Wiped only by `docker compose down -v` (explicit volume removal).
+# ---------------------------------------------------------------------------
+volumes:
+  postgres_data:
+  ollama_data:
